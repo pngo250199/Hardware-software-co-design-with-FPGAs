@@ -1,125 +1,254 @@
-# Hardware-software-co-design-with-FPGAs
 
-## 1. Why FPGA and What Makes It Different from an MCU
-
-The Zynq-7000 was selected because it combines an ARM Cortex-A9 processing system with FPGA programmable logic on the same device. Compared with a traditional microcontroller, such as the STM32, the Zynq platform provides significantly more processing resources and allows both software and custom hardware logic to operate together.
-
-A microcontroller mainly executes instructions sequentially on its CPU core and is well suited for real-time control tasks such as reading sensors, generating PWM signals, and controlling motors. In contrast, an FPGA allows developers to create custom hardware IP blocks that can perform operations in parallel. These hardware blocks can run independently from the ARM software, which makes the FPGA useful for accelerating computationally intensive workloads.
-
-The ARM Cortex-A9 is used for software control, system coordination, and communication, while the FPGA programmable logic is used for hardware acceleration. This architecture is especially useful for workloads such as image processing, video pipelines, filtering, and edge detection.
-
-The Zynq platform also provides room for future expansion. Custom FPGA resources can be reused to build more advanced accelerators, including image-processing pipelines, digital signal-processing blocks, and machine-learning inference hardware. This makes the platform valuable for learning hardware/software co-design and for developing reusable embedded-system architectures.
-
-## 2. FPGA Fundamentals
-
-An FPGA (Field-Programmable Gate Array) is a programmable digital hardware device that allows developers to create custom logic circuits instead of only executing software instructions on a processor. FPGA designs are commonly described using hardware description languages such as Verilog or VHDL and are synthesized into physical FPGA resources.
-
-The main FPGA resources used in digital design include:
-
-- **LUTs (Look-Up Tables):** Implement combinational logic, Boolean functions, multiplexers, and simple arithmetic.
-- **Flip-Flops / Registers:** Store values between clock cycles and are used for sequential logic, pipelines, counters, and state machines.
-- **BRAM (Block RAM):** Dedicated on-chip memory used for buffers, lookup tables, and temporary data storage.
-- **DSP Slices:** Dedicated arithmetic hardware optimized for multiplication, addition, accumulation, and signal-processing operations.
-- **Clocking Resources:** Distribute and synchronize clock signals throughout the FPGA design.
-
-Unlike a CPU or MCU, which generally executes instructions sequentially, multiple FPGA hardware blocks can operate concurrently. This parallelism makes FPGA devices useful for workloads such as image processing, digital signal processing, hardware acceleration, and real-time data pipelines.
-
-### FPGA Development Flow
-
-The development flow used in this project is:
-
-`RTL Design → Synthesis → Implementation → Bitstream Generation → FPGA Programming`
-
-During synthesis, Verilog RTL is translated into FPGA resources such as LUTs and flip-flops. During implementation, Vivado performs placement and routing to map those resources onto the physical FPGA device. The generated bitstream is then programmed into the FPGA.
-
-**Vivado Block Design**
-
-<img width="396" height="455" alt="image" src="https://github.com/user-attachments/assets/81947c9e-ca29-43fe-a7eb-963026c21596" />
-
-Fig.1. Basic GPIO IP block
-
-<img width="302" height="106" alt="image" src="https://github.com/user-attachments/assets/3f5e6ec4-cb5f-4a36-924f-814fe57b4a24" />
-<img width="333" height="127" alt="image" src="https://github.com/user-attachments/assets/85db078c-b748-436f-b8ad-464109829674" />
-
-Fig.2 and 3. Initial wires such as gpio_input and gpio_output
-
-<img width="236" height="118" alt="image" src="https://github.com/user-attachments/assets/85c614c0-6960-4b2a-87fc-f613432079ea" />
-Fig.4. Add logic for custom IP block, in this case register 2 of slave will store the ouput from inputs are switches
-
-
-
-The block design above shows the Zynq Processing System connected to the custom FPGA IP through an AXI interconnect. This allows the ARM Cortex-A9 processor to communicate with programmable logic through memory-mapped registers.
-
-### Custom FPGA IP
-
-Custom hardware IP is implemented in Verilog and connected to the ARM processing system through AXI4-Lite.
-
-<img width="1080" height="503" alt="image" src="https://github.com/user-attachments/assets/e1a40a9e-ffe3-49ee-9c06-4534686ab3d9" />
-
-Fig.5. Custom IP block connected with ARM processing system through AXI4-Lite
-
-
-For the first hardware/software co-design test, the custom IP exposes registers that allow the Cortex-A9 to read physical switch inputs and control FPGA-connected LEDs.
-
-The communication path is:
-
-`Cortex-A9 Software → AXI4-Lite → Custom FPGA IP → FPGA GPIO`
-
-### AXI Memory-Mapped Communication
-
-The custom peripheral uses memory-mapped registers so that software can access FPGA hardware using normal memory addresses.
-
-Example register map:
-
-| Offset | Function |
-| --- | --- |
-| `0x00` | Switch / Input Register |
-| `0x04` | LED / Output Register |
-
-
-The Cortex-A9 can access these registers using C pointers:
-
-```c
-value = *(volatile uint32_t *)(XPAR_CUSTOMIP_0_BASEADDR + 0x00U);
-
-*(volatile uint32_t *)(XPAR_CUSTOMIP_0_BASEADDR + 0x04U) = value;
+## 1. AXI4-Stream and HDMI Output
+*Resources:
 ```
+https://github.com/Digilent/vivado-library
+https://uoy.atlassian.net/wiki/spaces/RTS/pages/35688270/Zybo+Z7+HDMI+Output
+https://miscircuitos.com/video-processing-fpga-zybo-using-vhdl/
+https://github.com/Digilent/Zybo-Z7-10-HDMI/tree/master/sdk/appsrc
 
-This provides a simple demonstration of hardware/software co-design because software running on the ARM processor directly communicates with custom digital hardware implemented inside the FPGA. 
+```
+<img width="338" height="453" alt="image" src="https://github.com/user-attachments/assets/b421fe9b-d0d9-4969-b7f4-5f8da7c035d6" />
 
-The base address can find in Vivado Address Editor, the software will be modify for embedded the system from Vitis
+After validating processor-to-FPGA control, the next stage introduced high-bandwidth video data.
 
-<img width="968" height="427" alt="image" src="https://github.com/user-attachments/assets/8ee94877-abd8-4023-a9df-5071ca056c6e" />
-Fig.6. Base address located in Address Editor
+AXI4-Lite is useful for control registers, but it is not designed for continuously transferring large amounts of pixel data. For video applications, AXI4-Stream is used instead.
 
-### FPGA Resource Utilization
+The first video pipeline generated HDMI output from data stored in DDR memory:
+```
+`DDR Framebuffer -> VDMA -> AXI4-Stream -> Video Output -> HDMI`
+```
+The Video DMA (VDMA) transfers framebuffer data from DDR memory into the video stream. The Cortex-A9 configures the VDMA through AXI4-Lite, while the actual pixel data is transferred through AXI4-Stream.
 
-After synthesis and implementation, Vivado provides reports showing how many FPGA resources are used by the design.
+This introduced several important FPGA video-processing components:
 
-<img width="717" height="517" alt="image" src="https://github.com/user-attachments/assets/616fd11d-f851-418f-80fe-11c7676e75e0" />
-Fig.7. FPGA Utilities in Project summary
+- Video DMA
+- AXI4-Stream
+- Framebuffers
+- Video Timing Controller
+- Dynamic pixel clocks
+- RGB-to-HDMI conversion
+
+The HDMI lab used an MM2S, or **Memory-Mapped to Stream**, VDMA channel to convert framebuffer data stored in DDR into a continuous video stream.
+```
+`DDR -> VDMA MM2S -> AXI4-Stream -> HDMI`
+```
+The output pipeline also converts 32-bit framebuffer data into 24-bit RGB video data before sending it to the display.
+
+### Key Concept
+
+This stage introduced the difference between the **control path** and the **data path**:
+```
+`Cortex-A9 -> AXI4-Lite -> Hardware Configuration`
+```
+while
+```
+`DDR -> AXI4-Stream -> Pixel Data`
+```
+<img width="713" height="341" alt="image" src="https://github.com/user-attachments/assets/f455a5d0-2777-4ce7-82a3-859d8a734c69" />
+Fig.1. Completed HDMI image out block design
+
+---
+
+## 2. HDMI Input and Output
+
+The video architecture was then expanded from output-only into a complete input/output pipeline.
+
+Instead of only reading framebuffer data, the system can receive external video through HDMI RX, write frames into DDR, and later stream them back to HDMI TX.
+
+The architecture becomes:
+```
+`HDMI RX -> HDMI Decoder -> VDMA -> DDR -> VDMA -> HDMI TX`
+```
+Two VDMA directions are used.
+
+### Stream-to-Memory-Mapped
+
+S2MM transfers incoming AXI4-Stream video into DDR memory:
+```
+`HDMI Input -> AXI4-Stream -> VDMA S2MM -> DDR`
+```
+### Memory-Mapped-to-Stream
+
+MM2S performs the reverse operation:
+```
+`DDR -> VDMA MM2S -> AXI4-Stream -> HDMI Output`
+```
+Both channels operating together allow frames to be captured, stored, selected, and displayed.
+
+Multiple framebuffers also make it possible to separate the currently captured frame from the frame being displayed.
+
+For example:
+```
+`Camera -> Framebuffer 0`
+```
+while simultaneously:
+```
+`Framebuffer 1 -> Display`
+```
+This architecture is important because future FPGA image-processing logic can operate on stored or streaming image data without requiring the processor to manipulate every pixel.
+
+### Clock Domain Crossing
+
+The HDMI decoder produces its own pixel clock, while the AXI4-Stream pipeline uses a different clock.
+
+FIFO buffering is therefore used to safely move pixel data between clock domains.
+
+This introduced another important FPGA design concept:
+
+**Different hardware modules may operate at different clock frequencies, so data must be synchronized when crossing between clock domains.**
+
+<img width="1886" height="960" alt="image" src="https://github.com/user-attachments/assets/4e24aa8a-978a-4430-a508-81cbe6fa96dc" />
+Fig.2. Full system design of HDMI input to HDMI output
 
 
-These reports are useful for understanding the hardware cost of a design and will become increasingly important as image-processing and hardware-acceleration modules are added for example.
+---
 
-### Hardware Validation
+## 3. HDMI Input and VGA Output
 
-The custom AXI peripheral was validated on the physical Zybo Z7 board.
+The next stage reused the video-input architecture while changing the physical output interface.
+
+The Zybo receives video through HDMI and outputs the processed video through the Pmod VGA interface.
+
+The pipeline is approximately:
+```
+`HDMI Input -> HDMI Decoder -> FIFO -> VDMA -> DDR -> AXI4-Stream -> VGA`
+```
+The VGA interface requires:
+
+- Red pixel data
+- Green pixel data
+- Blue pixel data
+- Horizontal synchronization
+- Vertical synchronization
+
+This demonstrated that the internal FPGA video pipeline is independent of the final physical display interface.
+
+The important architecture is:
+```
+`Video Source -> Streaming Pipeline -> Processing -> Video Sink`
+```
+The sink could be HDMI, VGA, memory, or another FPGA processing module.
+
+<img width="552" height="278" alt="image" src="https://github.com/user-attachments/assets/ed9cbcc5-7ebf-4f5c-b5a7-4c919d6774ed" />
+Fig.3. HDMI input to VGA output
 
 
-https://github.com/user-attachments/assets/4e79009f-e46e-46fc-ac37-410349ffd31b
 
+---
 
-The ARM Cortex-A9 writes to the FPGA register through AXI, and the programmable logic drives the physical LEDs. This confirms the complete communication path between software and custom FPGA hardware.
+## 4. AXI Interface Summary
 
-### Future FPGA Development
+The labs introduced three AXI communication styles that serve different purposes.
 
-The current AXI and GPIO implementation establishes the foundation for more computationally intensive FPGA modules. Future development will reuse the same hardware/software co-design architecture for:
+| Interface             | Purpose                         | Project Use              |
+| --------------------- |-------------------------------- | ------------------------ |
+| **AXI4-Lite**         | Low-bandwidth control registers | Configure custom FPGA IP |
+| **AXI4-Stream**       | Continuous high-bandwidth data  | Transfer video pixels    |
+| **AXI Memory-Mapped** | High-bandwidth memory access    | VDMA access to DDR       |
 
-- Grayscale image conversion
-- Sobel and other edge-detection algorithms
-- Parallel pixel processing
-- Camera and video pipelines
-- Hardware acceleration performance comparison
-- Custom control and status registers
-- Machine-learning inference accelerators
+A typical system therefore contains two different communication paths.
+
+### Control Path
+```
+`Cortex-A9 -> AXI4-Lite -> FPGA Registers`
+```
+Used for:
+
+- Configuration
+- Control commands
+- Threshold values
+- Start/stop operations
+- Status registers
+
+### Data Path
+```
+`Camera -> AXI4-Stream -> FPGA -> VDMA -> DDR`
+```
+Used for:
+
+- Pixel data
+- Frames
+- High-bandwidth image information
+
+Separating the control path from the data path is one of the key architectural concepts used throughout this project.
+
+---
+
+## 5. Moving Toward Hardware Image Acceleration
+
+The previous stages establish the infrastructure required for the autonomous explorer project.
+
+Currently, the video pipeline primarily transports image data:
+
+`Camera -> Video Pipeline -> Display`
+
+The next stage is to insert custom FPGA computation into that path:
+```
+`Camera`
+`   ↓`
+`Pixel Stream`
+`   ↓`
+`Custom FPGA Accelerator`
+`   ├── Grayscale Conversion`
+`   ├── Edge Detection`
+`   └── Future Vision Processing`
+`   ↓`
+`Processed Results`
+```
+The Cortex-A9 will continue to configure and coordinate the accelerator through AXI4-Lite while the FPGA performs pixel operations in parallel.
+
+<img width="1898" height="821" alt="image" src="https://github.com/user-attachments/assets/4035818f-a5bf-4aff-930f-0e4c3b0a54c9" />
+Fig.4. Completed HDMI input to HDMI output including edge detect hardware IP block
+
+This creates the hardware/software architecture:
+```
+`Cortex-A9`
+`   |`
+`AXI4-Lite`
+`   ↓`
+`FPGA Control Registers`
+`   |`
+`   ↓`
+`Hardware Image Accelerator`
+`   ↑`
+`AXI4-Stream Video`
+```
+---
+
+## 6. Connection to the Autonomous Explorer Project
+
+The purpose of these FPGA exercises is not simply to display video.
+
+Each stage develops a subsystem that will eventually contribute to the heterogeneous autonomous platform:
+```
+`Camera`
+`   ↓`
+`Zynq FPGA`
+`   ├── Video Input`
+`   ├── Grayscale`
+`   ├── Edge Detection`
+`   └── Hardware Acceleration`
+`   ↓`
+`ARM Cortex-A9`
+`   ├── Accelerator Configuration`
+`   ├── Performance Measurement`
+`   └── System Coordination`
+`   ↓`
+`STM32`
+`   ├── Ultrasonic / Sensor Input`
+`   ├── PWM`
+`   ├── Servo / Motor Control`
+`   └── Real-Time Response`
+```
+The FPGA provides parallel computation for image-processing workloads, while the STM32 remains responsible for deterministic real-time sensing and actuator control.
+
+Future experiments will measure the reaction time between obstacle detection and actuator response and compare different processing approaches, including:
+
+- Pure C processing
+- ARM NEON/SIMD acceleration
+- Custom FPGA hardware acceleration
+- STM32 real-time sensing and control
+
+The goal is to evaluate where each processing architecture is most effective rather than forcing all tasks onto a single processor.
+
