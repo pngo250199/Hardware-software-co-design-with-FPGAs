@@ -12,22 +12,89 @@ The Zynq platform also provides room for future expansion. Custom FPGA resources
 
 ## 2. FPGA Fundamentals
 
-An FPGA (Field-Programmable Gate Array) is a programmable digital hardware device that allows developers to create custom logic circuits instead of only executing software instructions on a processor. FPGA designs are typically described using a hardware description language such as Verilog or VHDL and are synthesized into physical FPGA resources.
+An FPGA (Field-Programmable Gate Array) is a programmable digital hardware device that allows developers to create custom logic circuits instead of only executing software instructions on a processor. FPGA designs are commonly described using hardware description languages such as Verilog or VHDL and are synthesized into physical FPGA resources.
 
 The main FPGA resources used in digital design include:
 
-- **LUTs (Look-Up Tables):** Implement combinational logic such as Boolean equations, multiplexers, and arithmetic operations.
-- **Flip-Flops / Registers:** Store data between clock cycles and are used to build sequential logic, pipelines, counters, and state machines.
-- **BRAM (Block RAM):** Dedicated on-chip memory used for buffers, lookup tables, frame data, and temporary storage.
-- **DSP Slices:** Dedicated arithmetic hardware optimized for operations such as multiplication, addition, accumulation, and signal-processing calculations.
-- **Clocking Resources:** Distribute clock signals throughout the FPGA and synchronize sequential hardware logic.
+- **LUTs (Look-Up Tables):** Implement combinational logic, Boolean functions, multiplexers, and simple arithmetic.
+- **Flip-Flops / Registers:** Store values between clock cycles and are used for sequential logic, pipelines, counters, and state machines.
+- **BRAM (Block RAM):** Dedicated on-chip memory used for buffers, lookup tables, and temporary data storage.
+- **DSP Slices:** Dedicated arithmetic hardware optimized for multiplication, addition, accumulation, and signal-processing operations.
+- **Clocking Resources:** Distribute and synchronize clock signals throughout the FPGA design.
 
-Unlike a CPU or MCU, where instructions are executed by a processor, FPGA logic can operate concurrently. Multiple hardware modules can process data during the same clock cycle. This parallel execution is one of the main reasons FPGAs are useful for workloads such as image processing, digital signal processing, and hardware acceleration.
+Unlike a CPU or MCU, which generally executes instructions sequentially, multiple FPGA hardware blocks can operate concurrently. This parallelism makes FPGA devices useful for workloads such as image processing, digital signal processing, hardware acceleration, and real-time data pipelines.
 
-The FPGA development flow used in this project follows:
+### FPGA Development Flow
 
-`RTL Design → Synthesis → Implementation → Bitstream Generation → Hardware Programming`
+The development flow used in this project is:
 
-During synthesis, the Verilog RTL is converted into FPGA resources such as LUTs and flip-flops. During implementation, Vivado performs placement and routing to physically map the design onto the FPGA device. The generated bitstream is then programmed into the FPGA to configure the hardware.
+`RTL Design → Synthesis → Implementation → Bitstream Generation → FPGA Programming`
 
-For the Zynq-7000 platform, the FPGA programmable logic is also connected to the ARM Cortex-A9 processing system through AXI interfaces. This allows software running on the processor to configure custom FPGA IP blocks, send data to the hardware, and read results back through memory-mapped registers.
+During synthesis, Verilog RTL is translated into FPGA resources such as LUTs and flip-flops. During implementation, Vivado performs placement and routing to map those resources onto the physical FPGA device. The generated bitstream is then programmed into the FPGA.
+
+**Vivado Block Design**
+
+![Vivado Block Design](docs/images/vivado_block_design.png)
+
+The block design above shows the Zynq Processing System connected to the custom FPGA IP through an AXI interconnect. This allows the ARM Cortex-A9 processor to communicate with programmable logic through memory-mapped registers.
+
+### Custom FPGA IP
+
+Custom hardware IP is implemented in Verilog and connected to the ARM processing system through AXI4-Lite.
+
+![Custom AXI IP RTL](docs/images/custom_ip_rtl.png)
+
+For the first hardware/software co-design test, the custom IP exposes registers that allow the Cortex-A9 to read physical switch inputs and control FPGA-connected LEDs.
+
+The communication path is:
+
+`Cortex-A9 Software → AXI4-Lite → Custom FPGA IP → FPGA GPIO`
+
+### AXI Memory-Mapped Communication
+
+The custom peripheral uses memory-mapped registers so that software can access FPGA hardware using normal memory addresses.
+
+Example register map:
+
+| Offset | Function |
+| --- | --- |
+| `0x00` | Switch / Input Register |
+| `0x04` | LED / Output Register |
+
+The Cortex-A9 can access these registers using C pointers:
+
+```c
+value = *(volatile uint32_t *)(XPAR_CUSTOMIP_0_BASEADDR + 0x00U);
+
+*(volatile uint32_t *)(XPAR_CUSTOMIP_0_BASEADDR + 0x04U) = value;
+```
+
+This provides a simple demonstration of hardware/software co-design because software running on the ARM processor directly communicates with custom digital hardware implemented inside the FPGA.
+
+### FPGA Resource Utilization
+
+After synthesis and implementation, Vivado provides reports showing how many FPGA resources are used by the design.
+
+![FPGA Resource Utilization](docs/images/fpga_utilization.png)
+
+These reports are useful for understanding the hardware cost of a design and will become increasingly important as image-processing and hardware-acceleration modules are added.
+
+### Hardware Validation
+
+The custom AXI peripheral was validated on the physical Zybo Z7 board.
+
+![Zybo Hardware Test](docs/images/zybo_axi_test.jpg)
+
+The ARM Cortex-A9 writes to the FPGA register through AXI, and the programmable logic drives the physical LEDs. This confirms the complete communication path between software and custom FPGA hardware.
+
+### Future FPGA Development
+
+The current AXI and GPIO implementation establishes the foundation for more computationally intensive FPGA modules. Future development will reuse the same hardware/software co-design architecture for:
+
+- Grayscale image conversion
+- Sobel and other edge-detection algorithms
+- Parallel pixel processing
+- Camera and video pipelines
+- Hardware acceleration performance comparison
+- Custom control and status registers
+- Machine-learning inference accelerators
