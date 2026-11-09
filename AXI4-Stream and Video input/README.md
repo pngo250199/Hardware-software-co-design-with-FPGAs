@@ -6,10 +6,9 @@ https://github.com/Digilent/vivado-library
 https://uoy.atlassian.net/wiki/spaces/RTS/pages/35688270/Zybo+Z7+HDMI+Output
 https://miscircuitos.com/video-processing-fpga-zybo-using-vhdl/
 https://github.com/Digilent/Zybo-Z7-10-HDMI/tree/master/sdk/appsrc
-<img width="338" height="453" alt="image" src="https://github.com/user-attachments/assets/b421fe9b-d0d9-4969-b7f4-5f8da7c035d6" />
 
 ```
-
+<img width="338" height="453" alt="image" src="https://github.com/user-attachments/assets/b421fe9b-d0d9-4969-b7f4-5f8da7c035d6" />
 
 After validating processor-to-FPGA control, the next stage introduced high-bandwidth video data.
 
