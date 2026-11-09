@@ -1,5 +1,12 @@
 
-## 2. AXI4-Stream and HDMI Output
+## 1. AXI4-Stream and HDMI Output
+*Resources:
+```
+https://github.com/Digilent/vivado-library
+https://uoy.atlassian.net/wiki/spaces/RTS/pages/35688270/Zybo+Z7+HDMI+Output
+https://miscircuitos.com/video-processing-fpga-zybo-using-vhdl/
+```
+
 
 After validating processor-to-FPGA control, the next stage introduced high-bandwidth video data.
 
@@ -36,11 +43,12 @@ while
 ```
 `DDR -> AXI4-Stream -> Pixel Data`
 ```
-**Recommended screenshot:** Vivado HDMI output block design.
+<img width="713" height="341" alt="image" src="https://github.com/user-attachments/assets/f455a5d0-2777-4ce7-82a3-859d8a734c69" />
+Fig.1. Completed HDMI image out block design
 
 ---
 
-## 3. HDMI Input and Output
+## 2. HDMI Input and Output
 
 The video architecture was then expanded from output-only into a complete input/output pipeline.
 
@@ -88,11 +96,13 @@ This introduced another important FPGA design concept:
 
 **Different hardware modules may operate at different clock frequencies, so data must be synchronized when crossing between clock domains.**
 
-**Recommended screenshot:** HDMI RX -> VDMA -> DDR -> HDMI TX Vivado block design.
+<img width="1886" height="960" alt="image" src="https://github.com/user-attachments/assets/4e24aa8a-978a-4430-a508-81cbe6fa96dc" />
+Fig.2. Full system design of HDMI input to HDMI output
+
 
 ---
 
-## 4. HDMI Input and VGA Output
+## 3. HDMI Input and VGA Output
 
 The next stage reused the video-input architecture while changing the physical output interface.
 
@@ -118,11 +128,14 @@ The important architecture is:
 ```
 The sink could be HDMI, VGA, memory, or another FPGA processing module.
 
-**Recommended screenshot:** HDMI-input/VGA-output block design or physical VGA output demonstration.
+<img width="552" height="278" alt="image" src="https://github.com/user-attachments/assets/ed9cbcc5-7ebf-4f5c-b5a7-4c919d6774ed" />
+Fig.3. HDMI input to VGA output
+
+
 
 ---
 
-## 5. AXI Interface Summary
+## 4. AXI Interface Summary
 
 The labs introduced three AXI communication styles that serve different purposes.
 
@@ -160,7 +173,7 @@ Separating the control path from the data path is one of the key architectural c
 
 ---
 
-## 6. Moving Toward Hardware Image Acceleration
+## 5. Moving Toward Hardware Image Acceleration
 
 The previous stages establish the infrastructure required for the autonomous explorer project.
 
@@ -183,6 +196,9 @@ The next stage is to insert custom FPGA computation into that path:
 ```
 The Cortex-A9 will continue to configure and coordinate the accelerator through AXI4-Lite while the FPGA performs pixel operations in parallel.
 
+<img width="1898" height="821" alt="image" src="https://github.com/user-attachments/assets/4035818f-a5bf-4aff-930f-0e4c3b0a54c9" />
+Fig.4. Completed HDMI input to HDMI output including edge detect hardware IP block
+
 This creates the hardware/software architecture:
 ```
 `Cortex-A9`
@@ -198,7 +214,7 @@ This creates the hardware/software architecture:
 ```
 ---
 
-## 7. Connection to the Autonomous Explorer Project
+## 6. Connection to the Autonomous Explorer Project
 
 The purpose of these FPGA exercises is not simply to display video.
 
