@@ -188,7 +188,7 @@ This was an important milestone because it confirmed that the ARM processing sys
 
 ---
 
-### Why This Matters for the Car Project
+### Why This Matters for any project for example Explorer Car Project
 
 The LED experiment is not the final purpose of the AXI interface. It is a simple hardware validation step used to verify that the processor and FPGA can communicate correctly.
 
