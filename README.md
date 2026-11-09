@@ -34,7 +34,19 @@ During synthesis, Verilog RTL is translated into FPGA resources such as LUTs and
 
 **Vivado Block Design**
 
-![Vivado Block Design](docs/images/vivado_block_design.png)
+<img width="396" height="455" alt="image" src="https://github.com/user-attachments/assets/81947c9e-ca29-43fe-a7eb-963026c21596" />
+
+Fig.1. Basic GPIO IP block
+
+<img width="302" height="106" alt="image" src="https://github.com/user-attachments/assets/3f5e6ec4-cb5f-4a36-924f-814fe57b4a24" />
+<img width="333" height="127" alt="image" src="https://github.com/user-attachments/assets/85db078c-b748-436f-b8ad-464109829674" />
+
+Fig.2 and 3. Initial wires such as gpio_input and gpio_output
+
+<img width="236" height="118" alt="image" src="https://github.com/user-attachments/assets/85c614c0-6960-4b2a-87fc-f613432079ea" />
+Fig.4. Add logic for custom IP block, in this case register 2 of slave will store the ouput from inputs are switches
+
+
 
 The block design above shows the Zynq Processing System connected to the custom FPGA IP through an AXI interconnect. This allows the ARM Cortex-A9 processor to communicate with programmable logic through memory-mapped registers.
 
@@ -42,7 +54,10 @@ The block design above shows the Zynq Processing System connected to the custom 
 
 Custom hardware IP is implemented in Verilog and connected to the ARM processing system through AXI4-Lite.
 
-![Custom AXI IP RTL](docs/images/custom_ip_rtl.png)
+<img width="1080" height="503" alt="image" src="https://github.com/user-attachments/assets/e1a40a9e-ffe3-49ee-9c06-4534686ab3d9" />
+
+Fig.5. Custom IP block connected with ARM processing system through AXI4-Lite
+
 
 For the first hardware/software co-design test, the custom IP exposes registers that allow the Cortex-A9 to read physical switch inputs and control FPGA-connected LEDs.
 
@@ -61,6 +76,7 @@ Example register map:
 | `0x00` | Switch / Input Register |
 | `0x04` | LED / Output Register |
 
+
 The Cortex-A9 can access these registers using C pointers:
 
 ```c
@@ -69,21 +85,30 @@ value = *(volatile uint32_t *)(XPAR_CUSTOMIP_0_BASEADDR + 0x00U);
 *(volatile uint32_t *)(XPAR_CUSTOMIP_0_BASEADDR + 0x04U) = value;
 ```
 
-This provides a simple demonstration of hardware/software co-design because software running on the ARM processor directly communicates with custom digital hardware implemented inside the FPGA.
+This provides a simple demonstration of hardware/software co-design because software running on the ARM processor directly communicates with custom digital hardware implemented inside the FPGA. 
+
+The base address can find in Vivado Address Editor, the software will be modify for embedded the system from Vitis
+
+<img width="968" height="427" alt="image" src="https://github.com/user-attachments/assets/8ee94877-abd8-4023-a9df-5071ca056c6e" />
+Fig.6. Base address located in Address Editor
 
 ### FPGA Resource Utilization
 
 After synthesis and implementation, Vivado provides reports showing how many FPGA resources are used by the design.
 
-![FPGA Resource Utilization](docs/images/fpga_utilization.png)
+<img width="717" height="517" alt="image" src="https://github.com/user-attachments/assets/616fd11d-f851-418f-80fe-11c7676e75e0" />
+Fig.7. FPGA Utilities in Project summary
 
-These reports are useful for understanding the hardware cost of a design and will become increasingly important as image-processing and hardware-acceleration modules are added.
+
+These reports are useful for understanding the hardware cost of a design and will become increasingly important as image-processing and hardware-acceleration modules are added for example.
 
 ### Hardware Validation
 
 The custom AXI peripheral was validated on the physical Zybo Z7 board.
 
-![Zybo Hardware Test](docs/images/zybo_axi_test.jpg)
+
+https://github.com/user-attachments/assets/4e79009f-e46e-46fc-ac37-410349ffd31b
+
 
 The ARM Cortex-A9 writes to the FPGA register through AXI, and the programmable logic drives the physical LEDs. This confirms the complete communication path between software and custom FPGA hardware.
 
